@@ -25,6 +25,6 @@ jobs:
     - name: Build
       run: npm run build
       env:
-    VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+       VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
         npm install
         npx webpack
