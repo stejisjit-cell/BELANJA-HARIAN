@@ -2,20 +2,30 @@ import React, { useRef, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
+  Cloud,
+  CloudUpload,
   Database,
   Download,
   FileSpreadsheet,
-  FileText,
+  Globe,
   HardDrive,
   Info,
+  Key,
   RefreshCw,
   RotateCcw,
   ShieldCheck,
   Smartphone,
   Trash2,
   Upload,
+  User,
 } from 'lucide-react';
 import { PWAInstallBanner } from '../components/PWAInstallBanner';
+import { useAuth } from '../context/AuthContext';
+import {
+  getFirebaseConfig,
+  isFirebaseConfigured,
+  saveCustomFirebaseConfig,
+} from '../lib/firebase';
 import { Category, Transaction } from '../types/finance';
 import { downloadJSONFile, exportTransactionsToCSV } from '../utils/exportData';
 
@@ -26,6 +36,8 @@ interface SettingsViewProps {
   onRestoreDemo: () => Promise<any>;
   onImportJSON: (payload: any) => Promise<any>;
   onExportAllData: () => Promise<any>;
+  onOpenAuth: () => void;
+  onOpenMigration: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -35,11 +47,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onRestoreDemo,
   onImportJSON,
   onExportAllData,
+  onOpenAuth,
+  onOpenMigration,
 }) => {
+  const { currentUser, userProfile } = useAuth();
+  const currentConfig = getFirebaseConfig();
+
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [importStatus, setImportStatus] = useState<string | null>(null);
+  const [showConfigForm, setShowConfigForm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Custom Firebase config form state
+  const [cfgApiKey, setCfgApiKey] = useState(currentConfig?.apiKey || '');
+  const [cfgProjectId, setCfgProjectId] = useState(currentConfig?.projectId || '');
+  const [cfgAppId, setCfgAppId] = useState(currentConfig?.appId || '');
+  const [cfgAuthDomain, setCfgAuthDomain] = useState(currentConfig?.authDomain || '');
 
   const handleBackupDownload = async () => {
     setIsBusy(true);
@@ -78,38 +102,217 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     reader.readAsText(file);
   };
 
+  const handleSaveConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cfgApiKey.trim() || !cfgProjectId.trim()) {
+      alert('API Key dan Project ID wajib diisi.');
+      return;
+    }
+    saveCustomFirebaseConfig({
+      apiKey: cfgApiKey.trim(),
+      projectId: cfgProjectId.trim(),
+      appId: cfgAppId.trim(),
+      authDomain: cfgAuthDomain.trim() || `${cfgProjectId.trim()}.firebaseapp.com`,
+    });
+  };
+
+  const handleResetConfig = () => {
+    if (confirm('Hapus konfigurasi manual dan kembali ke pengaturan berkas .env?')) {
+      saveCustomFirebaseConfig(null);
+    }
+  };
+
   return (
     <div className="space-y-5 sm:space-y-6 max-w-4xl mx-auto">
       {/* Header Banner */}
       <div className="bg-white border border-[#EFE8E1] rounded-3xl p-5 sm:p-6 shadow-xs">
         <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#FAF0E9] text-[#8F483D] border border-[#EADBCE]">
-          Pengaturan & Keamanan
+          Pengaturan Versi 2
         </span>
         <h2 className="font-serif-heading font-extrabold text-xl sm:text-2xl text-[#55443B] mt-2">
-          Penyimpanan Data & Cadangan
+          Akun, Sinkronisasi Cloud & Cadangan
         </h2>
         <p className="text-xs text-[#78665D] mt-0.5">
-          Data keuangan Bunda 100% tersimpan aman di browser/HP Bunda tanpa dikirim ke server luar
+          Kelola integrasi Firebase, sinkronisasi antarperangkat, dan keamanan data belanja
         </p>
+      </div>
+
+      {/* 1. Account & Multi-Device Sync Card */}
+      <div className="bg-white border border-[#EFE8E1] rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-[#EDF0E9] flex items-center justify-center text-[#5A634E] shadow-2xs">
+              <Cloud className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-serif-heading font-bold text-base text-[#55443B]">
+                Status Sinkronisasi Multi-Device
+              </h3>
+              <p className="text-xs text-[#78665D]">
+                {currentUser
+                  ? `Terhubung sebagai ${userProfile?.email || userProfile?.displayName}`
+                  : 'Saat ini menggunakan penyimpanan lokal (belum login)'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onOpenAuth}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-2xs ${
+              currentUser
+                ? 'bg-white border border-[#E2D6CB] text-[#55443B] hover:bg-[#FAF4ED]'
+                : 'bg-[#DDA29B] hover:bg-[#CE8F87] text-white shadow-xs'
+            }`}
+          >
+            {currentUser ? 'Kelola Akun' : 'Masuk / Daftar Akun'}
+          </button>
+        </div>
+
+        {currentUser ? (
+          <div className="p-3.5 bg-[#FAFBF9] border border-[#EDF0E9] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#5A634E]" />
+              <span className="font-semibold text-[#55443B]">
+                Data tersinkron otomatis ke HP Android, iPhone, dan Komputer
+              </span>
+            </div>
+            <button
+              onClick={onOpenMigration}
+              className="px-3 py-1.5 bg-white border border-[#E2D6CB] text-[#8F483D] font-bold rounded-xl flex items-center gap-1.5 self-start sm:self-auto hover:bg-[#FAF4ED]"
+            >
+              <CloudUpload className="w-3.5 h-3.5" />
+              <span>Migrasikan Catatan Lokal ke Akun Ini</span>
+            </button>
+          </div>
+        ) : (
+          <div className="p-3.5 bg-[#FAF5F0] border border-[#EFE5DB] rounded-2xl space-y-1 text-xs text-[#78665D]">
+            <p className="font-semibold text-[#55443B]">
+              💡 Ingin membuka catatan belanja yang sama dari HP dan Laptop?
+            </p>
+            <p>
+              Daftar akun gratis BundaBudget. Seluruh data transaksi, pagu anggaran, dan target
+              tabungan akan tersinkron otomatis secara real-time.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* 2. Firebase Connection Card */}
+      <div className="bg-white border border-[#EFE8E1] rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-[#FAF1E8] flex items-center justify-center text-[#8F483D]">
+              <Key className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-serif-heading font-bold text-base text-[#55443B]">
+                Koneksi Firebase Backend
+              </h3>
+              <p className="text-xs text-[#78665D]">
+                {isFirebaseConfigured
+                  ? `Terhubung ke Project: ${currentConfig?.projectId}`
+                  : 'Belum terkonfigurasi (Mode Lokal Aktif)'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setShowConfigForm(!showConfigForm)}
+            className="text-xs font-bold text-[#8F483D] hover:underline"
+          >
+            {showConfigForm ? 'Tutup Pengaturan' : 'Atur Kredensial'}
+          </button>
+        </div>
+
+        {/* Configuration Form if user wants to change or input keys in UI */}
+        {showConfigForm && (
+          <form
+            onSubmit={handleSaveConfig}
+            className="p-4 bg-[#FAF5F0] border border-[#EFE5DB] rounded-2xl space-y-3 text-xs"
+          >
+            <p className="text-[#78665D] leading-relaxed">
+              Bunda dapat mengisi kredensial Firebase Web App dari{' '}
+              <strong>Firebase Console → Project Settings → Web App</strong>:
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-[#55443B] mb-1">
+                  Firebase API Key *
+                </label>
+                <input
+                  type="text"
+                  placeholder="AIzaSy..."
+                  value={cfgApiKey}
+                  onChange={(e) => setCfgApiKey(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 rounded-xl border border-[#E2D6CB] bg-white text-xs text-[#55443B]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#55443B] mb-1">
+                  Project ID *
+                </label>
+                <input
+                  type="text"
+                  placeholder="bundabudget-xxx"
+                  value={cfgProjectId}
+                  onChange={(e) => setCfgProjectId(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 rounded-xl border border-[#E2D6CB] bg-white text-xs text-[#55443B]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#55443B] mb-1">
+                  App ID
+                </label>
+                <input
+                  type="text"
+                  placeholder="1:123456789:web:abcdef..."
+                  value={cfgAppId}
+                  onChange={(e) => setCfgAppId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-[#E2D6CB] bg-white text-xs text-[#55443B]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#55443B] mb-1">
+                  Auth Domain
+                </label>
+                <input
+                  type="text"
+                  placeholder="project-id.firebaseapp.com"
+                  value={cfgAuthDomain}
+                  onChange={(e) => setCfgAuthDomain(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-[#E2D6CB] bg-white text-xs text-[#55443B]"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <button
+                type="button"
+                onClick={handleResetConfig}
+                className="text-[11px] text-[#A05B54] hover:underline"
+              >
+                Kembalikan ke Nilai Default .env
+              </button>
+
+              <button
+                type="submit"
+                className="px-4 py-2 bg-[#55443B] hover:bg-[#43352E] text-white font-bold rounded-xl shadow-xs"
+              >
+                Simpan & Muat Ulang
+              </button>
+            </div>
+          </form>
+        )}
       </div>
 
       {/* PWA Installation Card */}
       <PWAInstallBanner variant="settings" />
-
-      {/* Local Storage Privacy Note */}
-      <div className="bg-[#FAF5F0] border border-[#EFE4D9] rounded-3xl p-5 shadow-xs space-y-2.5">
-        <div className="flex items-center gap-2.5 font-bold text-sm text-[#55443B]">
-          <ShieldCheck className="w-5 h-5 text-[#8F483D]" />
-          <span>Privasi & Penyimpanan Offline (IndexedDB)</span>
-        </div>
-        <p className="text-xs text-[#78665D] leading-relaxed">
-          Aplikasi BundaBudget menggunakan database lokal <strong>IndexedDB</strong> pada perangkat Bunda.
-          Seluruh data transaksi belanja, target tabungan, dan anggaran tetap tersimpan utuh meskipun halaman ditutup atau saat HP tidak memiliki koneksi internet.
-        </p>
-        <p className="text-[11px] text-[#8C7A70] italic">
-          💡 Catatan: Karena data tersimpan di memori perangkat, data di HP dan laptop tidak otomatis saling tersinkronisasi. Bunda dapat menggunakan fitur Cadangkan (Backup JSON) di bawah untuk memindahkan data antar-perangkat dengan mudah.
-        </p>
-      </div>
 
       {/* Backup and Restore Section */}
       <div className="bg-white border border-[#EFE8E1] rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
@@ -119,10 +322,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
           <div>
             <h3 className="font-serif-heading font-bold text-base text-[#55443B]">
-              Cadangan & Pemulihan Data (Backup & Restore)
+              Cadangan & Pemulihan Berkas (Backup & Restore)
             </h3>
             <p className="text-xs text-[#78665D]">
-              Simpan salinan data Bunda ke file agar aman dari pembersihan browser
+              Unduh salinan berkas JSON atau ekspor ke Microsoft Excel
             </p>
           </div>
         </div>
@@ -221,7 +424,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </p>
             <button
               onClick={() => {
-                if (confirm('Muat data contoh demo BundaBudget? Data yang belum dicadangkan akan diganti data demo.')) {
+                if (confirm('Muat data contoh demo BundaBudget?')) {
                   onRestoreDemo();
                 }
               }}
@@ -262,7 +465,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
 
             <p className="text-xs text-[#78665D] leading-relaxed">
-              Tindakan ini akan <strong>menghapus seluruh transaksi, budget, tabungan, dan checklist</strong> dari browser Bunda. Tindakan ini tidak dapat dibatalkan kecuali Bunda memiliki file cadangan JSON.
+              Tindakan ini akan <strong>menghapus data lokal</strong> dari browser Bunda. Tindakan ini tidak dapat dibatalkan kecuali Bunda memiliki file cadangan JSON.
             </p>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#EFE8E1]">

@@ -2,5 +2,7 @@
   "name": "BundaBudget — Keuangan Rumah Tangga",
   "description": "Aplikasi pencatatan keuangan dan anggaran belanja bulanan praktis dan elegan untuk ibu rumah tangga.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

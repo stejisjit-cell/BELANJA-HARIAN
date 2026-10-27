@@ -1,0 +1,130 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information and household preferences",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "photoURL": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Individual household expense transaction record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 10 },
+        "itemName": { "type": "string", "maxLength": 150 },
+        "categoryId": { "type": "string", "maxLength": 128 },
+        "unitPrice": { "type": "number" },
+        "quantity": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "storeName": { "type": "string", "maxLength": 150 },
+        "paymentMethod": { "type": "string", "maxLength": 80 },
+        "notes": { "type": "string", "maxLength": 500 },
+        "receiptImage": { "type": "string", "maxLength": 1000000 },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "date", "itemName", "categoryId", "unitPrice", "quantity", "totalAmount"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Household budgeting category with icon and allocated budget",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 80 },
+        "icon": { "type": "string", "maxLength": 50 },
+        "color": { "type": "string", "maxLength": 20 },
+        "allocatedBudget": { "type": "number" },
+        "isDefault": { "type": "boolean" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "name", "icon", "color", "allocatedBudget"]
+    },
+    "MonthlyBudget": {
+      "title": "MonthlyBudget",
+      "description": "Monthly budget target and category breakdown",
+      "type": "object",
+      "properties": {
+        "yearMonth": { "type": "string", "maxLength": 7 },
+        "totalBudget": { "type": "number" },
+        "savingsTarget": { "type": "number" },
+        "categoryAllocations": { "type": "object" },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["yearMonth", "totalBudget", "savingsTarget"]
+    },
+    "SavingsGoal": {
+      "title": "SavingsGoal",
+      "description": "Savings goal and history logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 100 },
+        "targetAmount": { "type": "number" },
+        "currentAmount": { "type": "number" },
+        "deadline": { "type": "string", "maxLength": 10 },
+        "color": { "type": "string", "maxLength": 20 },
+        "category": { "type": "string", "maxLength": 50 },
+        "history": { "type": "array" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "title", "targetAmount", "currentAmount"]
+    },
+    "ShoppingItem": {
+      "title": "ShoppingItem",
+      "description": "Shopping checklist item before market trip",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 120 },
+        "estimatedPrice": { "type": "number" },
+        "quantity": { "type": "number" },
+        "categoryId": { "type": "string", "maxLength": 128 },
+        "isPurchased": { "type": "boolean" },
+        "notes": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "name", "estimatedPrice", "quantity", "isPurchased"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document owned by the authenticated user"
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Transactions belonging strictly to the user"
+    },
+    "/users/{userId}/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Custom budget categories for the user"
+    },
+    "/users/{userId}/budgets/{budgetId}": {
+      "schema": "MonthlyBudget",
+      "description": "Monthly budget allocations and targets"
+    },
+    "/users/{userId}/savingsGoals/{goalId}": {
+      "schema": "SavingsGoal",
+      "description": "Family savings targets and deposit histories"
+    },
+    "/users/{userId}/shoppingLists/{itemId}": {
+      "schema": "ShoppingItem",
+      "description": "Market checklist items for the user"
+    }
+  }
+}

@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny all unexpected access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Global Helpers
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // User Profile Document (/users/{userId})
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false; // Disallow querying across all users to protect PII
+      allow create: if isOwner(userId) && isValidId(userId)
+                    && incoming().uid == request.auth.uid;
+      allow update: if isOwner(userId) && isValidId(userId)
+                    && incoming().uid == existing().uid; // UID is immutable
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // Transactions Subcollection
+      match /transactions/{transactionId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(transactionId)
+                      && incoming().id is string
+                      && incoming().totalAmount is number
+                      && incoming().itemName is string && incoming().itemName.size() <= 150;
+        allow update: if isOwner(userId) && isValidId(transactionId)
+                      && incoming().id == existing().id // id is immutable
+                      && incoming().totalAmount is number
+                      && incoming().itemName is string && incoming().itemName.size() <= 150;
+        allow delete: if isOwner(userId) && isValidId(transactionId);
+      }
+
+      // Categories Subcollection
+      match /categories/{categoryId} {
+        allow get, list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(categoryId)
+                              && incoming().name is string && incoming().name.size() <= 80
+                              && incoming().allocatedBudget is number;
+        allow delete: if isOwner(userId) && isValidId(categoryId);
+      }
+
+      // Budgets Subcollection
+      match /budgets/{budgetId} {
+        allow get, list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(budgetId)
+                              && incoming().yearMonth is string && incoming().yearMonth.size() <= 10
+                              && incoming().totalBudget is number;
+        allow delete: if isOwner(userId) && isValidId(budgetId);
+      }
+
+      // Savings Goals Subcollection
+      match /savingsGoals/{goalId} {
+        allow get, list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(goalId)
+                              && incoming().title is string && incoming().title.size() <= 120
+                              && incoming().targetAmount is number
+                              && incoming().currentAmount is number;
+        allow delete: if isOwner(userId) && isValidId(goalId);
+      }
+
+      // Shopping List Subcollection
+      match /shoppingLists/{itemId} {
+        allow get, list: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidId(itemId)
+                              && incoming().name is string && incoming().name.size() <= 150
+                              && incoming().estimatedPrice is number
+                              && incoming().isPurchased is bool;
+        allow delete: if isOwner(userId) && isValidId(itemId);
+      }
+    }
+  }
+}

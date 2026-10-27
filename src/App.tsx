@@ -1,19 +1,22 @@
 /**
  * BundaBudget — Keuangan Rumah Tangga
- * Main Application Component
+ * Main Application Component (Version 2 with Firebase Multi-Device Sync & Auth)
  */
 
 import React, { useState } from 'react';
+import { AddExpenseModal } from './components/AddExpenseModal';
 import { BottomNav } from './components/BottomNav';
 import { CategoryDetailModal } from './components/CategoryDetailModal';
 import { EditExpenseModal } from './components/EditExpenseModal';
 import { Header } from './components/Header';
+import { LocalDataMigrationModal } from './components/LocalDataMigrationModal';
 import { ManageCategoriesModal } from './components/ManageCategoriesModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
-import { AddExpenseModal } from './components/AddExpenseModal';
 import { SidebarNav } from './components/SidebarNav';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { useFinanceData } from './hooks/useFinanceData';
 import { ActiveTab, Category, Transaction } from './types/finance';
+import { AuthModal } from './views/AuthModal';
 import { BudgetView } from './views/BudgetView';
 import { DashboardView } from './views/DashboardView';
 import { ExpensesView } from './views/ExpensesView';
@@ -22,7 +25,8 @@ import { SavingsView } from './views/SavingsView';
 import { SettingsView } from './views/SettingsView';
 import { ShoppingListView } from './views/ShoppingListView';
 
-export default function App() {
+function BundaBudgetMain() {
+  const { currentUser } = useAuth();
   const {
     selectedMonth,
     setSelectedMonth,
@@ -35,6 +39,11 @@ export default function App() {
     shoppingList,
     isLoading,
     toastMessage,
+    // Sync state
+    syncStatus,
+    isMigrationPromptOpen,
+    setIsMigrationPromptOpen,
+    localDataForMigration,
     // Metrics
     totalMonthlyExpense,
     monthlyBudgetAmount,
@@ -68,6 +77,7 @@ export default function App() {
   const [selectedTransactionForEdit, setSelectedTransactionForEdit] = useState<Transaction | null>(null);
   const [selectedCategoryForDetail, setSelectedCategoryForDetail] = useState<Category | null>(null);
   const [isManageCategoriesOpen, setIsManageCategoriesOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const openAddExpense = (catId?: string) => {
     setAddExpenseInitialCat(catId);
@@ -86,13 +96,15 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Top Header */}
+      {/* Main Top Header with Sync Badge & Auth */}
       <Header
         selectedMonth={selectedMonth}
         onMonthChange={setSelectedMonth}
         onOpenAddExpense={() => openAddExpense()}
         activeTab={activeTab}
         onSelectTab={setActiveTab}
+        syncStatus={syncStatus}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
       />
 
       {/* Application Body Layout */}
@@ -106,7 +118,7 @@ export default function App() {
             <div className="flex flex-col items-center justify-center py-24 space-y-3">
               <div className="w-10 h-10 border-4 border-[#DDA29B] border-t-transparent rounded-full animate-spin" />
               <p className="text-xs sm:text-sm font-semibold text-[#78665D]">
-                Membuka pembukuan BundaBudget...
+                Menghubungkan pembukuan BundaBudget...
               </p>
             </div>
           ) : (
@@ -189,6 +201,8 @@ export default function App() {
                   onRestoreDemo={handleRestoreDemo}
                   onImportJSON={handleImportJSON}
                   onExportAllData={exportAllData}
+                  onOpenAuth={() => setIsAuthModalOpen(true)}
+                  onOpenMigration={() => setIsMigrationPromptOpen(true)}
                 />
               )}
             </>
@@ -244,6 +258,33 @@ export default function App() {
         onSaveCategory={handleSaveCategory}
         onDeleteCategory={handleDeleteCategory}
       />
+
+      {/* Authentication & Profile Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
+
+      {/* Version 1 Local Data Migration Modal */}
+      {currentUser && (
+        <LocalDataMigrationModal
+          isOpen={isMigrationPromptOpen}
+          onClose={() => setIsMigrationPromptOpen(false)}
+          uid={currentUser.uid}
+          localData={localDataForMigration}
+          onMigrationSuccess={() => {
+            setIsMigrationPromptOpen(false);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <BundaBudgetMain />
+    </AuthProvider>
   );
 }
